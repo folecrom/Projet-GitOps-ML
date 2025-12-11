@@ -7,25 +7,47 @@ parser.add_argument("--candidate")
 parser.add_argument("--production")
 args = parser.parse_args()
 
-# Charger le modèle candidat
-with open(args.candidate) as f:
+candidate_path = args.candidate
+production_path = args.production
+
+# Helper pour créer un fichier metrics.json minimal
+def create_default_metrics(path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump({"f1": 0.0}, f, indent=2)
+    print(f"Created default metrics file at {path}")
+
+
+# 🔹 1) Vérifier fichier candidat
+if not os.path.exists(candidate_path):
+    print("⚠ Aucun modèle candidat trouvé — création automatique.")
+    create_default_metrics(candidate_path)
+
+# Charger les métriques candidat
+with open(candidate_path) as f:
     cand = json.load(f)
 
-cand_score = cand["f1"]
+cand_score = cand.get("f1", 0.0)
 
-# Si le modèle production n'existe pas -> promote=True
-if not os.path.exists(args.production):
-    print("No production model found — auto-promote.")
-    is_better = True
-else:
-    with open(args.production) as f:
-        prod = json.load(f)
-    prod_score = prod["f1"]
-    is_better = cand_score > prod_score
-    print(f"Candidat: {cand_score}, Production: {prod_score}")
 
+# 🔹 2) Vérifier fichier production
+if not os.path.exists(production_path):
+    print("⚠ Aucun modèle production trouvé — création automatique.")
+    create_default_metrics(production_path)
+
+# Charger métriques production
+with open(production_path) as f:
+    prod = json.load(f)
+
+prod_score = prod.get("f1", 0.0)
+
+
+# 🔹 3) Comparaison
+print(f"Candidat: {cand_score}, Production: {prod_score}")
+is_better = cand_score > prod_score
 print("Promote:", is_better)
 
-# GitHub Actions moderne
+
+# 🔹 4) Output pour GitHub Actions
 with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
     fh.write(f"promote={str(is_better).lower()}\n")
