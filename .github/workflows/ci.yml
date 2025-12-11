@@ -1,4 +1,4 @@
-name: Test GitOps-ML Pipeline
+name: GitOps MLOps Pipeline
 
 on:
   push:
@@ -6,48 +6,61 @@ on:
       - main
 
 jobs:
-  train-model:
+  mlops-pipeline:
     runs-on: ubuntu-latest
+
     steps:
+      # 1️⃣ Checkout du repo
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          lfs: true
 
+      # 2️⃣ Setup Python
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
+      # 3️⃣ Installer dépendances
       - name: Install dependencies
         run: |
-          pip install pandas scikit-learn joblib jq
+          pip install dvc pandas scikit-learn joblib
 
-      - name: Run training script
+      # 4️⃣ Récupérer les CSV via DVC
+      - name: Pull datasets from DVC
+        run: dvc pull
+
+      # 5️⃣ Entraîner le modèle candidat
+      - name: Train candidate model
         run: |
-          python train_model.py
+          python train_model.py --out models/candidate/model.joblib
 
-      - name: Show result
+      # 6️⃣ Comparer avec le modèle en production
+      - name: Compare with production model
+        id: compare
         run: |
-          cat train_result.json
+          python evaluate.py \
+            --candidate models/candidate/metrics.json \
+            --production models/production/metrics.json
 
-      - name: Quality Gate (F1 >= 0.8)
-        id: quality
+      # 7️⃣ Promotion automatique si meilleur
+      - name: Promote model to production
+        if: steps.compare.outputs.promote == 'true'
         run: |
-          VALUE=$(jq .value train_result.json)
-          THRESHOLD=0.8
+          echo "New model is better — promoting to production."
+          mkdir -p models/production
+          cp models/candidate/model.joblib models/production/model.joblib
+          cp models/candidate/metrics.json models/production/metrics.json
 
-          echo "F1-score obtenu: $VALUE"
-          echo "Seuil accepté: $THRESHOLD"
+          dvc add models/production/model.joblib
+          git add models/production/*
+          git commit -m "Promoted model to production"
+          git push
 
-          if (( $(echo "$VALUE < $THRESHOLD" | bc -l) )); then
-            echo "Qualité insuffisante ❌"
-            exit 1
-          fi
-
-          echo "Qualité validée ✅"
-
-      - name: Deploy model to production
-        if: success()      # Ne s'exécute que si le Quality Gate est OK
+      # 8️⃣ Blocage si le modèle est moins performant
+      - name: Block deployment (new model worse)
+        if: steps.compare.outputs.promote != 'true'
         run: |
-          mkdir -p production
-          cp models/model.joblib production/model.joblib
-          echo "Déploiement réussi : modèle envoyé dans production/"
+          echo "New model is worse ❌ — NOT promoted."
+          exit 1
