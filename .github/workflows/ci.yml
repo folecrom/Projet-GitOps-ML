@@ -19,7 +19,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas scikit-learn joblib
+          pip install pandas scikit-learn joblib jq
 
       - name: Run training script
         run: |
@@ -28,3 +28,26 @@ jobs:
       - name: Show result
         run: |
           cat train_result.json
+
+      - name: Quality Gate (F1 >= 0.8)
+        id: quality
+        run: |
+          VALUE=$(jq .value train_result.json)
+          THRESHOLD=0.8
+
+          echo "F1-score obtenu: $VALUE"
+          echo "Seuil accepté: $THRESHOLD"
+
+          if (( $(echo "$VALUE < $THRESHOLD" | bc -l) )); then
+            echo "Qualité insuffisante ❌"
+            exit 1
+          fi
+
+          echo "Qualité validée ✅"
+
+      - name: Deploy model to production
+        if: success()      # Ne s'exécute que si le Quality Gate est OK
+        run: |
+          mkdir -p production
+          cp models/model.joblib production/model.joblib
+          echo "Déploiement réussi : modèle envoyé dans production/"
