@@ -1,0 +1,60 @@
+### Fichiers et Dossiers Python ###
+# Dossier de l'environnement virtuel
+venv/
+.venv/
+env/
+/bin/
+/lib/
+/include/
+pip-selfcheck.json
+
+# Fichiers de compilation et de cache Python
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+
+# Fichiers de log, de cache et de données temporaires
+*.log
+*.tmp
+*.bak
+*~
+
+### MLOPS / DVC (Data Version Control) ###
+# Cache DVC principal et temporaires
+# C'est ici que DVC stocke le contenu réel des données. 
+# Ce dossier NE DOIT JAMAIS être dans Git, car il est géré par DVC push/pull.
+.dvc/cache/
+.dvc/tmp/
+.dvc/state
+.dvc/lock
+
+### IDENTIFIANTS et SECRETS CLOUD (GCP) ###
+# Votre clé JSON de compte de service Google Cloud. 
+# C'est la ligne la plus CRITIQUE à ajouter !
+# Remplacez "VOTRE_CLE_DE_SERVICE.json" par le nom exact de votre fichier
+VOTRE_CLE_DE_SERVICE.json
+
+# Autres identifiants/clés génériques
+*.key
+*.pem
+*.env
+.env
+.flaskenv
+
+### JUPYTER / IDE (Si vous utilisez un Notebook ou VS Code) ###
+.ipynb_checkpoints
+.vscode/
+
+### Fichiers de Modèles et de Données (Si non trackés par DVC) ###
+# Si vous suivez models/production/model.joblib avec DVC, 
+# il DOIT être listé ici si vous voulez ignorer les autres modèles intermédiaires.
+# Vous pouvez ignorer TOUS les fichiers .joblib non trackés :
+*.joblib
+*.pkl
+*.h5
+*.onnx
+*.json
+
+# Données non trackées
+data/untracked_data/
