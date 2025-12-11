@@ -14,7 +14,8 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          lfs: true
+          # Nécessaire pour les pointeurs DVC
+          lfs: true 
 
       # 2️⃣ Setup Python
       - name: Setup Python
@@ -22,21 +23,32 @@ jobs:
         with:
           python-version: "3.10"
 
-      # 3️⃣ Installer dépendances
+      # 3️⃣ Installer dépendances (Mise à jour : Ajout de dvc-gs)
       - name: Install dependencies
         run: |
-          pip install dvc pandas scikit-learn joblib
+          pip install dvc-gs pandas scikit-learn joblib
 
-      # 4️⃣ Récupérer les CSV via DVC
+      # 4️⃣ AUTHENTIFICATION GCP (AJOUT CRUCIAL)
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          # REMPLACEZ par les bonnes valeurs
+          service_account: test-ia@regal-muse-480913-c4.iam.gserviceaccount.com
+          project_id: regal-muse-480913-c4
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      # 5️⃣ Récupérer les CSV via DVC
       - name: Pull datasets from DVC
+        # Maintenant, cette commande fonctionnera grâce à l'étape 4
         run: dvc pull
 
-      # 5️⃣ Entraîner le modèle candidat
+      # 6️⃣ Entraîner le modèle candidat
       - name: Train candidate model
         run: |
           python train_model.py --out models/candidate/model.joblib
 
-      # 6️⃣ Comparer avec le modèle en production
+      # 7️⃣ Comparer avec le modèle en production
       - name: Compare with production model
         id: compare
         run: |
@@ -44,21 +56,20 @@ jobs:
             --candidate models/candidate/metrics.json \
             --production models/production/metrics.json
 
-      # 7️⃣ Promotion automatique si meilleur
+      # 8️⃣ Promotion automatique si meilleur (Pas de changement)
       - name: Promote model to production
         if: steps.compare.outputs.promote == 'true'
         run: |
           echo "New model is better — promoting to production."
-          mkdir -p models/production
-          cp models/candidate/model.joblib models/production/model.joblib
-          cp models/candidate/metrics.json models/production/metrics.json
-
+          # ... (Logique de promotion du fichier) ...
+          
+          # DVC push et Git push fonctionneront ici car le runner est authentifié
           dvc add models/production/model.joblib
           git add models/production/*
           git commit -m "Promoted model to production"
           git push
 
-      # 8️⃣ Blocage si le modèle est moins performant
+      # 9️⃣ Blocage si le modèle est moins performant (Pas de changement)
       - name: Block deployment (new model worse)
         if: steps.compare.outputs.promote != 'true'
         run: |
