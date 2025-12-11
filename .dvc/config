@@ -1,4 +1,4 @@
 [core]
     remote = myremote
 ['remote "myremote"']
-    url = C:/Users/PROPRIETAIRE/Desktop/code/Projet/Projet-GitOps-ML/dvc_storage
+    url = ../dvc_storage
