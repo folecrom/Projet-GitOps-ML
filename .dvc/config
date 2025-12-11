@@ -1,4 +1,4 @@
 [core]
-    remote = myremote
-['remote "myremote"']
-    url = ../dvc_storage
+    remote = gcs_remote
+['remote "gcs_remote"']
+    url = gs://bucket_mlops_4_5_9/dvc_cache
