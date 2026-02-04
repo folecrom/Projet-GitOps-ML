@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+# 🔑 AJOUT : Autorise GitHub Actions à modifier le dépôt (pour le git push)
+permissions:
+  contents: write
+
 jobs:
   mlops-pipeline:
     runs-on: ubuntu-latest
@@ -14,7 +18,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          # Nécessaire pour les pointeurs DVC
           lfs: true 
 
       # 2️⃣ Setup Python
@@ -23,24 +26,22 @@ jobs:
         with:
           python-version: "3.10"
 
-      # 3️⃣ Installer dépendances (Mise à jour : Ajout de dvc-gs)
+      # 3️⃣ Installer dépendances
       - name: Install dependencies
         run: |
           pip install dvc-gs pandas scikit-learn joblib
 
-      # 4️⃣ AUTHENTIFICATION GCP (AJOUT CRUCIAL)
+      # 4️⃣ Authentification GCP
       - name: Authenticate to Google Cloud
         id: auth
         uses: google-github-actions/auth@v2
         with:
-          # REMPLACEZ par les bonnes valeurs
           service_account: test-ia@regal-muse-480913-c4.iam.gserviceaccount.com
           project_id: regal-muse-480913-c4
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
-      # 5️⃣ Récupérer les CSV via DVC
+      # 5️⃣ Récupérer les données
       - name: Pull datasets from DVC
-        # Maintenant, cette commande fonctionnera grâce à l'étape 4
         run: dvc pull
 
       # 6️⃣ Entraîner le modèle candidat
@@ -56,22 +57,36 @@ jobs:
             --candidate models/candidate/metrics.json \
             --production models/production/metrics.json
 
-      # 8️⃣ Promotion automatique si meilleur (Pas de changement)
+      # 8️⃣ Promotion automatique (LOGIQUE COMPLÈTE)
       - name: Promote model to production
         if: steps.compare.outputs.promote == 'true'
         run: |
-          echo "New model is better — promoting to production."
-          # ... (Logique de promotion du fichier) ...
+          echo "Le nouveau modèle est meilleur — Promotion en cours..."
           
-          # DVC push et Git push fonctionneront ici car le runner est authentifié
-          dvc add models/production/model.joblib
-          git add models/production/*
-          git commit -m "Promoted model to production"
-          git push
+          # Configuration de l'identité Git (obligatoire pour commit)
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
 
-      # 9️⃣ Blocage si le modèle est moins performant (Pas de changement)
-      - name: Block deployment (new model worse)
+          # Création du dossier et copie des fichiers
+          mkdir -p models/production
+          cp models/candidate/model.joblib models/production/model.joblib
+          cp models/candidate/metrics.json models/production/metrics.json
+
+          # Mise à jour de DVC pour le modèle de production
+          dvc add models/production/model.joblib
+          
+          # Push des métadonnées vers Git (.dvc et .json)
+          # On ajoute [skip ci] pour éviter de relancer le pipeline en boucle
+          git add models/production/model.joblib.dvc models/production/metrics.json
+          git commit -m "MLOps: Mise à jour du modèle de production [skip ci]"
+          git push origin main
+
+          # Push du modèle physique vers Google Cloud Storage
+          dvc push
+
+      # 9️⃣ Blocage si échec
+      - name: Block deployment
         if: steps.compare.outputs.promote != 'true'
         run: |
-          echo "New model is worse ❌ — NOT promoted."
+          echo "Nouveau modèle moins performant ❌ — Fin du pipeline."
           exit 1
