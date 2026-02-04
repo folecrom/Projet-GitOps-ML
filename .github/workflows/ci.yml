@@ -5,7 +5,7 @@ on:
     branches:
       - main
 
-# 🔑 AJOUT : Autorise GitHub Actions à modifier le dépôt (pour le git push)
+#Autorise GitHub Actions à modifier le dépôt (pour le git push)
 permissions:
   contents: write
 
@@ -14,19 +14,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout du repo
+      # Checkout du repo
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           lfs: true 
 
-      # 2️⃣ Setup Python
+      # Python
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
-      # 3️⃣ Installer dépendances
+      # dépendances
       - name: Install dependencies
         run: |
           pip install dvc-gs pandas scikit-learn joblib
@@ -40,16 +40,16 @@ jobs:
           project_id: regal-muse-480913-c4
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
-      # 5️⃣ Récupérer les données
+      # Récupérer les données
       - name: Pull datasets from DVC
         run: dvc pull
 
-      # 6️⃣ Entraîner le modèle candidat
+      # Entraîner le modèle candidat
       - name: Train candidate model
         run: |
           python train_model.py --out models/candidate/model.joblib
 
-      # 7️⃣ Comparer avec le modèle en production
+      # Comparer avec le modèle en production
       - name: Compare with production model
         id: compare
         run: |
@@ -57,7 +57,7 @@ jobs:
             --candidate models/candidate/metrics.json \
             --production models/production/metrics.json
 
-      # 8️⃣ Promotion automatique (LOGIQUE COMPLÈTE)
+      # Promotion automatique (LOGIQUE COMPLÈTE)
       - name: Promote model to production
         if: steps.compare.outputs.promote == 'true'
         run: |
@@ -84,7 +84,7 @@ jobs:
           # Push du modèle physique vers Google Cloud Storage
           dvc push
 
-      # 9️⃣ Blocage si échec
+      # Blocage si échec
       - name: Block deployment
         if: steps.compare.outputs.promote != 'true'
         run: |
