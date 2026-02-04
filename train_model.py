@@ -47,6 +47,7 @@ def train_random_forest(train_path, test_path, out_model_path):
     print("Model trained!")
     print("F1-score:", f1)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--train", default="data/train.csv")
