@@ -47,7 +47,6 @@ print(f"Candidat: {cand_score}, Production: {prod_score}")
 is_better = cand_score > prod_score
 print("Promote:", is_better)
 
-
 # 🔹 4) Output pour GitHub Actions
 with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
     fh.write(f"promote={str(is_better).lower()}\n")
