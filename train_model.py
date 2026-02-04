@@ -18,7 +18,6 @@ def train_random_forest(train_path, test_path, out_model_path):
 
     X_test = df_test.iloc[:, :-1]
     y_test = df_test.iloc[:, -1]
-
     # 3. Train RandomForestClassifier
     model = RandomForestClassifier(
         n_estimators=150,
